@@ -63,8 +63,6 @@ This design avoids repeating project and subject metadata for every cell populat
 - `dashboard.py` rebuilds outputs when needed, generates `dashboard.html`, and serves it locally.
 - `Makefile` provides the required `setup`, `pipeline`, and `dashboard` targets.
 
-The scripts live in the repository root because the project is small and the assignment requires root-level execution. Paths are resolved relative to each script, so the workflow is reproducible without absolute local paths.
-
 ## Current Analysis Summary
 
 The response comparison uses PBMC samples from melanoma patients treated with miraclib. In the generated `miraclib_response_stats.csv`, no immune cell population is significant after FDR correction at 0.05.
