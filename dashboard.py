@@ -94,7 +94,7 @@ p {
 
 .metrics {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     padding: 22px 0;
 }
@@ -187,6 +187,17 @@ button:hover {
     align-items: start;
 }
 
+.response-layout {
+    display: grid;
+    gap: 18px;
+}
+
+.response-plot-frame {
+    max-width: 920px;
+    margin: 0 auto;
+    width: 100%;
+}
+
 .plot {
     width: 100%;
     max-height: 520px;
@@ -223,9 +234,40 @@ button:hover {
 }
 
 .table-wrap {
+    position: relative;
     overflow: auto;
     border: 1px solid var(--line);
     border-radius: 8px;
+    box-shadow: inset 0 -18px 14px -18px rgba(23, 33, 27, 0.9);
+    scrollbar-color: var(--accent) #eef2ec;
+    scrollbar-width: thin;
+}
+
+.table-wrap::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+    background: #eef2ec;
+    border-radius: 8px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border: 2px solid #eef2ec;
+    border-radius: 999px;
+}
+
+.limited-table-wrap {
+    max-height: 235px;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+}
+
+.stats-table-wrap {
+    overflow-x: auto;
 }
 
 table {
@@ -233,6 +275,10 @@ table {
     border-collapse: collapse;
     min-width: 640px;
     background: #fff;
+}
+
+.stats-table {
+    min-width: 820px;
 }
 
 th,
@@ -245,6 +291,9 @@ td {
 }
 
 th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     background: #f2f5ef;
     color: #354039;
     font-weight: 700;
@@ -312,7 +361,8 @@ a {
         <div class="metric"><span>Samples loaded</span><strong id="metricSamples"></strong></div>
         <div class="metric"><span>Frequency rows</span><strong id="metricFrequencies"></strong></div>
         <div class="metric"><span>Baseline subset samples</span><strong id="metricBaseline"></strong></div>
-        <div class="metric"><span>FDR significant populations</span><strong id="metricSignificant"></strong></div>
+        <div class="metric"><span>Raw significant populations</span><strong id="metricRawSignificant"></strong></div>
+        <div class="metric"><span>FDR significant populations</span><strong id="metricFdrSignificant"></strong></div>
     </section>
 </div>
 <main class="wrap">
@@ -320,7 +370,7 @@ a {
         <div class="section-head">
             <div>
                 <h2>Per-Sample Cell Frequencies</h2>
-                <p class="muted">Filter by sample id or population. The profile chart uses the first matching sample.</p>
+                <p class="muted">Filter by sample id or population. The profile chart uses the first matching sample. Scroll the table to view all matches.</p>
             </div>
             <p class="muted" id="frequencyCount"></p>
         </div>
@@ -330,7 +380,7 @@ a {
                     <label>Sample search<input id="sampleFilter" type="search" placeholder="sample00000"></label>
                     <label>Population<select id="populationFilter"></select></label>
                 </div>
-                <div class="table-wrap">
+                <div class="table-wrap limited-table-wrap">
                     <table>
                         <thead><tr><th>Sample</th><th>Total count</th><th>Population</th><th>Count</th><th>Percentage</th></tr></thead>
                         <tbody id="frequencyBody"></tbody>
@@ -347,16 +397,17 @@ a {
         <div class="section-head">
             <div>
                 <h2>Miraclib Response Comparison</h2>
-                <p class="muted" id="findingsText"></p>
+                <p class="muted" id="rawFindingsText"></p>
+                <p class="muted" id="fdrFindingsText"></p>
             </div>
         </div>
-        <div class="grid-two">
-            <div>
+        <div class="response-layout">
+            <div class="response-plot-frame">
                 <img class="plot" src="miraclib_response_boxplot.png" alt="Boxplot comparing responder and non-responder immune cell frequencies">
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Population</th><th>Responder median %</th><th>Non-responder median %</th><th>Adjusted p</th><th>Significant</th></tr></thead>
+            <div class="table-wrap stats-table-wrap">
+                <table class="stats-table">
+                    <thead><tr><th>Population</th><th>Responder median %</th><th>Non-responder median %</th><th>Raw p</th><th>Raw significant</th><th>FDR p</th><th>FDR significant</th></tr></thead>
                     <tbody id="statsBody"></tbody>
                 </table>
             </div>
@@ -366,7 +417,7 @@ a {
         <div class="section-head">
             <div>
                 <h2>Baseline Miraclib Melanoma PBMC Subset</h2>
-                <p class="muted">Baseline samples are filtered to time_from_treatment_start = 0.</p>
+                <p class="muted">Baseline samples are filtered to time_from_treatment_start = 0. Scroll the table to view all matches.</p>
             </div>
             <p class="muted" id="baselineCount"></p>
         </div>
@@ -378,7 +429,7 @@ a {
                     <label>Sex<select id="sexFilter"></select></label>
                     <button id="resetSubset" type="button">Reset</button>
                 </div>
-                <div class="table-wrap">
+                <div class="table-wrap limited-table-wrap">
                     <table>
                         <thead><tr><th>Project</th><th>Subject</th><th>Response</th><th>Sex</th><th>Sample</th><th>Time</th></tr></thead>
                         <tbody id="baselineBody"></tbody>
@@ -412,7 +463,8 @@ a {
 <script id="dashboard-data" type="application/json">__DATA__</script>
 <script>
 const data = JSON.parse(document.getElementById("dashboard-data").textContent);
-const maxRows = 300;
+const frequencyVisibleRows = 5;
+const baselineVisibleRows = 5;
 
 function byId(id) {
     return document.getElementById(id);
@@ -459,7 +511,8 @@ function renderMetrics() {
     byId("metricSamples").textContent = formatNumber(data.metadata.sample_count);
     byId("metricFrequencies").textContent = formatNumber(data.metadata.frequency_rows);
     byId("metricBaseline").textContent = formatNumber(data.metadata.baseline_samples);
-    byId("metricSignificant").textContent = formatNumber(data.metadata.significant_populations);
+    byId("metricRawSignificant").textContent = formatNumber(data.metadata.significant_unadjusted_populations);
+    byId("metricFdrSignificant").textContent = formatNumber(data.metadata.significant_fdr_populations);
 }
 
 function renderFrequencyTable() {
@@ -471,8 +524,8 @@ function renderFrequencyTable() {
         return matchesSample && matchesPopulation;
     });
 
-    byId("frequencyCount").textContent = `${formatNumber(rows.length)} matching rows, showing up to ${maxRows}`;
-    byId("frequencyBody").innerHTML = rows.slice(0, maxRows).map(row => `
+    byId("frequencyCount").textContent = `${formatNumber(rows.length)} matching rows, showing ${frequencyVisibleRows} at a time`;
+    byId("frequencyBody").innerHTML = rows.map(row => `
         <tr>
             <td>${escapeHtml(row.sample)}</td>
             <td>${formatNumber(row.total_count)}</td>
@@ -501,15 +554,21 @@ function renderSampleProfile(sampleQuery) {
 }
 
 function renderStats() {
-    const significant = data.stats.filter(row => row.significant_fdr_0_05 === "True");
-    byId("findingsText").textContent = significant.length
-        ? `${significant.map(row => row.population).join(", ")} differ significantly after FDR correction at 0.05.`
-        : "No immune cell populations differ significantly after FDR correction at 0.05.";
+    const rawSignificant = data.stats.filter(row => row.significant_unadjusted_0_05 === "True");
+    const fdrSignificant = data.stats.filter(row => row.significant_fdr_0_05 === "True");
+    byId("rawFindingsText").textContent = rawSignificant.length
+        ? `Using raw p-values, ${rawSignificant.map(row => row.population).join(", ")} differ significantly at 0.05.`
+        : "Using raw p-values, no immune cell populations differ significantly at 0.05.";
+    byId("fdrFindingsText").textContent = fdrSignificant.length
+        ? `After FDR correction, ${fdrSignificant.map(row => row.population).join(", ")} differ significantly at 0.05.`
+        : "After FDR correction, no immune cell populations differ significantly at 0.05.";
     byId("statsBody").innerHTML = data.stats.map(row => `
         <tr>
             <td>${escapeHtml(row.population)}</td>
             <td>${formatPct(row.responders_median_pct)}%</td>
             <td>${formatPct(row.non_responders_median_pct)}%</td>
+            <td>${number(row.p_value).toPrecision(4)}</td>
+            <td>${badge(row.significant_unadjusted_0_05)}</td>
             <td>${number(row.adjusted_p_value).toPrecision(4)}</td>
             <td>${badge(row.significant_fdr_0_05)}</td>
         </tr>
@@ -524,8 +583,8 @@ function renderSubset() {
         return (!project || row.project === project) && (!response || row.response === response) && (!sex || row.sex === sex);
     });
 
-    byId("baselineCount").textContent = `${formatNumber(rows.length)} matching samples, showing up to ${maxRows}`;
-    byId("baselineBody").innerHTML = rows.slice(0, maxRows).map(row => `
+    byId("baselineCount").textContent = `${formatNumber(rows.length)} matching samples, showing ${baselineVisibleRows} at a time`;
+    byId("baselineBody").innerHTML = rows.map(row => `
         <tr>
             <td>${escapeHtml(row.project)}</td>
             <td>${escapeHtml(row.subject)}</td>
@@ -605,7 +664,10 @@ def build_dashboard() -> None:
     baseline_samples = read_csv(BASELINE_SAMPLES_PATH)
     baseline_summary = read_csv(BASELINE_SUMMARY_PATH)
     sample_ids = {row["sample"] for row in frequencies}
-    significant_populations = [
+    significant_unadjusted_populations = [
+        row for row in stats if row["significant_unadjusted_0_05"] == "True"
+    ]
+    significant_fdr_populations = [
         row for row in stats if row["significant_fdr_0_05"] == "True"
     ]
     data = {
@@ -613,7 +675,8 @@ def build_dashboard() -> None:
             "sample_count": len(sample_ids),
             "frequency_rows": len(frequencies),
             "baseline_samples": total_from_summary(baseline_summary),
-            "significant_populations": len(significant_populations),
+            "significant_unadjusted_populations": len(significant_unadjusted_populations),
+            "significant_fdr_populations": len(significant_fdr_populations),
         },
         "frequencies": frequencies,
         "stats": stats,

@@ -134,6 +134,7 @@ def compute_statistics(
                 - median(non_responder_values),
                 "mann_whitney_u": float(test.statistic),
                 "p_value": p_value,
+                "significant_unadjusted_0_05": p_value < ALPHA,
             }
         )
 
@@ -157,6 +158,7 @@ def write_statistics(stats_rows: list[dict[str, object]]) -> None:
         "median_difference_pct",
         "mann_whitney_u",
         "p_value",
+        "significant_unadjusted_0_05",
         "adjusted_p_value",
         "significant_fdr_0_05",
     )
@@ -224,7 +226,8 @@ def print_summary(stats_rows: list[dict[str, object]]) -> None:
     print()
     print(
         "population,responders_median_pct,non_responders_median_pct,"
-        "median_difference_pct,p_value,adjusted_p_value,significant_fdr_0_05"
+        "median_difference_pct,p_value,significant_unadjusted_0_05,"
+        "adjusted_p_value,significant_fdr_0_05"
     )
 
     for row in stats_rows:
@@ -234,9 +237,32 @@ def print_summary(stats_rows: list[dict[str, object]]) -> None:
             f"{row['non_responders_median_pct']:.3f},"
             f"{row['median_difference_pct']:.3f},"
             f"{row['p_value']:.6g},"
+            f"{row['significant_unadjusted_0_05']},"
             f"{row['adjusted_p_value']:.6g},"
             f"{row['significant_fdr_0_05']}"
         )
+
+    unadjusted_significant = [
+        str(row["population"])
+        for row in stats_rows
+        if row["significant_unadjusted_0_05"]
+    ]
+    fdr_significant = [
+        str(row["population"])
+        for row in stats_rows
+        if row["significant_fdr_0_05"]
+    ]
+
+    print()
+    print("conclusion_type,populations")
+    print(
+        "unadjusted_p_lt_0_05,"
+        f"{';'.join(unadjusted_significant) if unadjusted_significant else 'none'}"
+    )
+    print(
+        "fdr_adjusted_p_lt_0_05,"
+        f"{';'.join(fdr_significant) if fdr_significant else 'none'}"
+    )
 
 
 def main() -> None:

@@ -58,13 +58,13 @@ This design avoids repeating project and subject metadata for every cell populat
 
 - `load_data.py` initializes `cell_counts.db` and loads `cell-count.csv`.
 - `cell_frequency.py` prints the Part 2 frequency table with `sample`, `total_count`, `population`, `count`, and `percentage`.
-- `statistical_analysis.py` filters melanoma PBMC samples treated with miraclib, compares responders and non-responders using Mann-Whitney U tests, applies Benjamini-Hochberg FDR correction, writes the statistics CSV, and creates the boxplot.
+- `statistical_analysis.py` filters melanoma PBMC samples treated with miraclib, compares responders and non-responders using Mann-Whitney U tests, reports both unadjusted and Benjamini-Hochberg FDR-adjusted significance, writes the statistics CSV, and creates the boxplot.
 - `subset_analysis.py` filters baseline melanoma PBMC samples treated with miraclib and writes the sample-level and summary CSV outputs.
 - `dashboard.py` rebuilds outputs when needed, generates `dashboard.html`, and serves it locally.
 - `Makefile` provides the required `setup`, `pipeline`, and `dashboard` targets.
 
 ## Current Analysis Summary
 
-The response comparison uses PBMC samples from melanoma patients treated with miraclib. In the generated `miraclib_response_stats.csv`, no immune cell population is significant after FDR correction at 0.05.
+The response comparison uses PBMC samples from melanoma patients treated with miraclib. In the generated `miraclib_response_stats.csv`, `cd4_t_cell` is significant using the unadjusted Mann-Whitney U p-value at 0.05. After Benjamini-Hochberg FDR correction across the five tested immune cell populations, no population remains significant at 0.05.
 
 The baseline subset contains 656 melanoma PBMC baseline samples treated with miraclib. The generated summary reports 384 samples from `prj1` and 272 from `prj3`; 331 responder subjects and 325 non-responder subjects; 312 female subjects and 344 male subjects.
